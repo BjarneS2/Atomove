@@ -12,10 +12,10 @@ import numpy as np
 @dataclass
 class PhysicalConstants3D:
     kB: float = 1.380649e-23
-    m: float = 2.20695e-25          # Cs-133 [kg]
-    g_SI: float = 9.81              # [m/s²]
-    w0_um: float = 1.0              # space unit [μm]
-    t0_us: float = 1.0              # time unit [μs]
+    m: float = 2.20695e-25
+    g_SI: float = 9.81
+    w0_um: float = 1.0
+    t0_us: float = 1.0
 
 
 DEFAULTS = PhysicalConstants3D()
@@ -23,13 +23,12 @@ DEFAULTS = PhysicalConstants3D()
 
 def compute_scales(T_tweezer: float, w0_um: float,
                    consts: PhysicalConstants3D = DEFAULTS) -> dict:
-    """Return a dict of derived scale factors."""
-    w0_SI = w0_um * 1e-6          # [m]
-    t0_SI = consts.t0_us * 1e-6   # [s]
-    v0    = w0_SI / t0_SI         # [m/s]  (= 1 m/s for default units)
-    E0    = consts.m * v0**2      # [J]
-    U0_J  = consts.kB * T_tweezer # [J]    trap depth
-    U0_dimless = U0_J / E0        # dimensionless trap depth
+    w0_SI = w0_um * 1e-6
+    t0_SI = consts.t0_us * 1e-6
+    v0    = w0_SI / t0_SI
+    E0    = consts.m * v0**2
+    U0_J  = consts.kB * T_tweezer
+    U0_dimless = U0_J / E0
     g_dimless  = consts.g_SI * t0_SI**2 / w0_SI
     return dict(
         w0_SI      = w0_SI,
@@ -38,7 +37,7 @@ def compute_scales(T_tweezer: float, w0_um: float,
         E0         = E0,
         U0_J       = U0_J,
         U0_dimless = U0_dimless,
-        U0_uK      = T_tweezer * 1e6,     # trap depth in μK
+        U0_uK      = T_tweezer * 1e6,
         g_dimless  = g_dimless,
         t0_us      = consts.t0_us,
         w0_um      = w0_um,

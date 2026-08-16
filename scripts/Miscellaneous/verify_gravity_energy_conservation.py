@@ -3,11 +3,6 @@ Standalone diagnostic: does neglecting gravitational PE in the lost/recaptured
 energy criterion explain the atoms that flicker lost<->recaptured during the
 extension (hold) period?
 
-Does NOT modify any file in src/, scripts/run_forward_3d.jl, or
-scripts/Visualization*/. It only imports the existing (unmodified)
-load_forward3d / compute_categories / plot_* functions and adds
-gravity-corrected counterparts locally.
-
 Usage:
     python scripts/Miscellaneous/verify_gravity_energy_conservation.py <forward3d.h5>
     (defaults to ResultsForThesis/forward3d_2026-08-10_16-32-11.h5)
@@ -35,8 +30,6 @@ from visualize_forward3D import load_forward3d
 
 DEFAULT_FILE = "ResultsForThesis/forward3d_2026-08-10_16-32-11.h5"
 
-
-# ── Gravity-aware counterparts of classify_thesis.py (kept local — original untouched) ──
 
 def compute_loss_mask_grav(x, y, z, vx, vy, vz, ux_arr, uy_arr, ua_arr, params, trap_fraction, g_dimless):
     n_steps, n_shots = x.shape
@@ -96,7 +89,6 @@ def compute_categories_grav(data, g_dimless):
 
 
 def count_sign_crossings(margin):
-    """margin: (n_steps_window, n_shots). Returns crossings per shot."""
     s = np.sign(margin)
     s[s == 0] = 1
     return np.sum(np.diff(s, axis=0) != 0, axis=0)
@@ -112,7 +104,7 @@ def _first_divergence_index(is_lost_a, is_lost_b):
     diff = is_lost_a != is_lost_b
     idx = np.full(diff.shape[1], -1, dtype=int)
     any_diff = diff.any(axis=0)
-    first = np.argmax(diff, axis=0)  # argmax finds first True; garbage if none
+    first = np.argmax(diff, axis=0)
     idx[any_diff] = first[any_diff]
     return idx
 
@@ -139,7 +131,6 @@ def main():
     print("── Classifying with gravity-corrected energy criterion ──")
     class_grav = compute_categories_grav(data, g_dimless)
 
-    # ── Metric 1: spurious flicker (sign crossings of the loss margin) during extension ──
     KE, PE, E_tot_nograv = total_energy(
         data["x"], data["y"], data["z"], data["vx"], data["vy"], data["vz"],
         data["ux"], data["uy"], data["ua"], data["params"],
@@ -154,15 +145,11 @@ def main():
     flicker_nograv = np.mean(crossings_nograv >= 2)
     flicker_grav = np.mean(crossings_grav >= 2)
 
-    # ── Metric 2: conservation quality — RMS variation of the tracked energy   ──
-    # during the extension, for shots that are gravity-bound the whole extension
-    # (a clean population where the true dynamics are simple oscillation, no loss)
     clean = ~class_grav["is_lost"][-1] & ~class_grav["is_lost"][ext_mask][0]
     rms_nograv = np.std(margin_nograv[ext_mask][:, clean], axis=0)
     rms_grav = np.std(margin_grav[ext_mask][:, clean], axis=0)
     U0_static = data["params"]["U0_static"]
 
-    # ── Metric 3: final survival comparison ──
     lost_nograv_final = class_nograv["is_lost"][-1]
     lost_grav_final = class_grav["is_lost"][-1]
     n_corrected_to_bound = int(np.sum(lost_nograv_final & ~lost_grav_final))
@@ -173,8 +160,6 @@ def main():
     ext_start_idx = int(np.argmax(ext_mask))
     diverged_in_extension = diverged & (first_div >= ext_start_idx)
 
-    # ── Metric 4: recapture/relost EVENTS during extension (what the classification ──
-    # plots actually visualize as flicker) — the direct match to what was observed.
     recap_rising_nograv = _rising_event_counts(class_nograv["is_caught_again"])
     recap_falling_nograv = _falling_event_counts(class_nograv["is_caught_again"])
     recap_rising_grav = _rising_event_counts(class_grav["is_caught_again"])
@@ -185,7 +170,6 @@ def main():
     ext_recap_grav = int(recap_rising_grav[ext_mask].sum())
     ext_relost_grav = int(recap_falling_grav[ext_mask].sum())
 
-    # ── Report ──
     report_lines = [
         f"File: {file_path.name}",
         f"Shots: {n_shots},  transport_time = {transport_time:.3f} (dimless time units), "
@@ -235,7 +219,6 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "gravity_conservation_report.txt").write_text(report, encoding="utf-8")
 
-    # ── Proof plot: energy-vs-time for the worst-flickering shots ──
     worst = np.argsort(-crossings_nograv)[:3]
     fig, axes = plt.subplots(len(worst), 1, figsize=(10, 3.2 * len(worst)), sharex=True)
     if len(worst) == 1:
@@ -260,7 +243,6 @@ def main():
     plt.close(fig)
     print(f"\nSaved proof plot: {out_dir / 'gravity_proof_energy_vs_time.png'}")
 
-    # ── Full thesis figure set, rerun with the gravity-corrected classification ──
     print("\n── Re-rendering the thesis figure set with the gravity-corrected classification ──")
     plot_control_protocol_thesis(data, out_dir, show_insets=True)
     plot_control_protocol_thesis(data, out_dir, show_insets=False)

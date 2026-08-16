@@ -9,9 +9,8 @@ const DEFAULT_SHOTS = 10000
 const DEFAULT_EXTENSION_FACTOR = 2.0
 
 const ENABLE_TRAP_FRACTION_CONSTRAINT = true
-const T_ATOM_OVERRIDE = 16e-6 # nothing for default
-const FINAL_TRAP_FRACTION_OVERRIDE = 0.7 # nothing for default
-# nothing for latest file:
+const T_ATOM_OVERRIDE = 16e-6
+const FINAL_TRAP_FRACTION_OVERRIDE = 0.7
 const PROTOCOL_FILE_OVERRIDE = raw"C:\dev\GitHub\Optimal-Control-of-Atomic-Motion-in-Optical-Tweezer-Arrays\ResultsForThesis\control3d_thermal_2026-07-29_00-39-15.h5"
 
 const sim_consts = default_constants3d()

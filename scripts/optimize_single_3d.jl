@@ -2,41 +2,34 @@ using atomove
 using HDF5
 using Dates
 
-# ── Physical constants and unit conversions ────────────────────────────────────
-# Space unit: 1 μm,  time unit: 1 μs  →  velocity unit: 1 m/s
-# Dimensionless trap depth: U0 = kB * T_tweezer / (m * v0^2)
-#   with v0 = w0_SI/t0_SI = 1e-6/1e-6 = 1 m/s and m = 2.20695e-25 kg
-
 consts = default_constants3d()
 
 kB     = consts.kB
 m      = consts.m
-w0_SI  = consts.w0_um * 1e-6    # 1e-6 m
-t0_SI  = consts.t0_us * 1e-6    # 1e-6 s
-v0     = w0_SI / t0_SI           # 1 m/s
-E0     = m * v0^2                # energy unit [J]
+w0_SI  = consts.w0_um * 1e-6
+t0_SI  = consts.t0_us * 1e-6
+v0     = w0_SI / t0_SI
+E0     = m * v0^2
 
-T_tweezer = 287e-6   # [K]
-T_atom    = 40e-6    # [K]
+T_tweezer = 287e-6
+T_atom    = 40e-6
 
-U0_static  = kB * T_tweezer / E0   # dimensionless static trap depth
-U0_aux_max = 3.0 * U0_static       # max aux depth = 3× static
+U0_static  = kB * T_tweezer / E0
+U0_aux_max = 3.0 * U0_static
 
-# Rayleigh ranges (z_R = π w0² / λ, in dimensionless units = μm)
 lambda_static_nm  = consts.wavelength_static_nm
 lambda_dynamic_nm = consts.wavelength_dynamic_nm
-w_static_um  = 1.2                          # static tweezer waist [μm]
-w_dynamic_um = 1.1                          # dynamic tweezer waist [μm]
-zR_static  = π * w_static_um^2  / (lambda_static_nm  * 1e-3)  # [μm]
-zR_dynamic = π * w_dynamic_um^2 / (lambda_dynamic_nm * 1e-3)  # [μm]
+w_static_um  = 1.2
+w_dynamic_um = 1.1
+zR_static  = π * w_static_um^2  / (lambda_static_nm  * 1e-3)
+zR_dynamic = π * w_dynamic_um^2 / (lambda_dynamic_nm * 1e-3)
 
-# Transport: along x-axis from 0 to 4.6 μm
-dist_um   = 4.6    # [μm] = [dimless]
+dist_um   = 4.6
 x_stop    = dist_um
 y_stop    = 0.0
 
 params = TweezerParams3D(
-    w              = w_static_um,           # static waist [μm dimless]
+    w              = w_static_um,
     w_aux_factor   = w_dynamic_um / w_static_um,
     zR             = zR_static,
     zR_aux         = zR_dynamic,
@@ -44,8 +37,8 @@ params = TweezerParams3D(
     y_start        = 0.0,
     x_stop         = x_stop,
     y_stop         = y_stop,
-    n              = 501,                   # time nodes (small for single-atom)
-    maxT           = 50.0,                  # [μs dimless]
+    n              = 501,
+    maxT           = 50.0,
     U0_static      = U0_static,
     U0_aux_max     = U0_aux_max,
     T_tweezer      = T_tweezer,
@@ -75,13 +68,7 @@ println("zR_static (μm)       = $zR_static")
 println("zR_dynamic (μm)      = $zR_dynamic")
 println("g_dimless            = $(consts.g_SI * t0_SI^2 / w0_SI)")
 
-# ── Initial guess ─────────────────────────────────────────────────────────────
-# Options (uncomment one):
-#   guess = nothing                          # built-in default (linear s, zero velocities)
-#   guess = linear_sweep_guess(params)       # constant-velocity tweezer sweep
-#   guess = sta_guess(params)                # 5th-order polynomial (zero jerk at endpoints)
   guess = load_guess_from_file("results/control3d_single_2026-04-14_11-49-44.h5", params)
-# guess = sta_guess(params)
 
 println("\nRunning single-atom 3D optimal control...")
 protocol, status, obj = optimize_controls3d_single(

@@ -206,7 +206,7 @@ if __name__ == "__main__":
             ]
         )
         * 1e-6
-    )  # np.linspace(0, 100e-6, 80)
+    )
 
     sim = ReleaseRecapture(
         T_vec=T_vec,
@@ -224,9 +224,9 @@ if __name__ == "__main__":
     survival_matrix = sim.run()
 
     if time_data_path and survival_data_path and survival_error_data_path:
-        delta_t_exp = time[:] * 1e-6  # type: ignore
-        survival_exp = survival[:]  # type: ignore
-        error_exp = error_survival[:]  # type: ignore
+        delta_t_exp = time[:] * 1e-6
+        survival_exp = survival[:]
+        error_exp = error_survival[:]
 
         chi_sq = [
             sim.chi_square(survival_matrix[i], survival_exp) for i in range(len(T_vec))
@@ -234,29 +234,3 @@ if __name__ == "__main__":
 
         T_best = T_vec[np.argmin(chi_sq)]
         print(f"T = {T_best * 1e6:.2f} µK")
-
-        # fig, ax = plt.subplots()
-        # ax.plot(T_vec * 1e6, chi_sq)
-        # ax.set_xlabel("T [µK]")
-        # ax.set_ylabel("χ²")
-        # plt.tight_layout()
-        # plt.savefig("chi_square.png", dpi=300)
-        # plt.show()
-
-        # fig, ax = plt.subplots()
-        # ax.plot(dt_vec * 1e6, survival_matrix[np.argmin(chi_sq)], label="Monte Carlo")
-        # ax.errorbar(
-        #     delta_t_exp * 1e6,
-        #     survival_exp / survival_exp[0],
-        #     error_exp,
-        #     marker=".",
-        #     label="exp data",
-        #     capsize=3,
-        # )
-        # ax.set_xlabel("Release time [µs]")
-        # ax.set_ylabel("Survival fraction")
-        # ax.set_title(f"T = {T_best * 1e6:.2f} µK")
-        # ax.legend()
-        # plt.tight_layout()
-        # plt.savefig("survival_comparison.png", dpi=300)
-        # plt.show()

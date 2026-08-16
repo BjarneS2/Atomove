@@ -52,7 +52,7 @@ dt_vec = (
     * 1e-6
 )
 
-powers_mW = np.round(np.arange(0.6, 2.21, 0.1), 1)  # 0.6..2.2 mW inclusive
+powers_mW = np.round(np.arange(0.6, 2.21, 0.1), 1)
 
 results = []
 for P_mW in powers_mW:
@@ -84,7 +84,7 @@ for P_mW in powers_mW:
     T_best = T_vec[best_idx]
     chi_best = chi_sq[best_idx]
 
-    trap_depth_uK = U_0 / scipy.constants.k * 1e6  # note: U_0 is negative
+    trap_depth_uK = U_0 / scipy.constants.k * 1e6
 
     results.append(
         (

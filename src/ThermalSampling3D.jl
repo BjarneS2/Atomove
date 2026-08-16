@@ -6,7 +6,6 @@ using Random
 
 export compute_scales3d_full, sample_initial_conditions3d, is_trapped3d
 
-# Returns the full scale namedtuple including g_dimless.
 function compute_scales3d_full(p::TweezerParams3D;
                                 consts::PhysicalConstants3D = default_constants3d())
     w0_SI  = consts.w0_um * 1e-6
@@ -15,27 +14,24 @@ function compute_scales3d_full(p::TweezerParams3D;
     E0     = consts.m * v0^2
 
     if p.move_in_single_trap
-        # Trap depth at t=0 in SI: single_trap_amplitude * kB * T_tweezer
         U0_SI  = p.single_trap_amplitude * consts.kB * p.T_tweezer
         w_SI   = p.w * p.w_aux_factor * w0_SI
         zR_SI  = p.zR_aux * w0_SI
     else
         U0_SI  = consts.kB * p.T_tweezer
-        w_SI   = p.w * w0_SI   # static trap waist (p.w is in units of w0)
+        w_SI   = p.w * w0_SI
         zR_SI  = p.zR * w0_SI
     end
 
-    # radial trap frequency from harmonic approximation: ωr² = 4U0/(m w²)
     omega_r = sqrt(4.0 * U0_SI / (consts.m * w_SI^2))
-    sigma_r = sqrt(consts.kB * p.T_atom / (consts.m * omega_r^2))   # [m]
+    sigma_r = sqrt(consts.kB * p.T_atom / (consts.m * omega_r^2))
     sigma_r_dimless = sigma_r / w0_SI
 
-    # axial trap frequency: ωz² = 2U0/(m zR²)
     omega_z = sqrt(2.0 * U0_SI / (consts.m * zR_SI^2))
-    sigma_z = sqrt(consts.kB * p.T_atom / (consts.m * omega_z^2))   # [m]
+    sigma_z = sqrt(consts.kB * p.T_atom / (consts.m * omega_z^2))
     sigma_z_dimless = sigma_z / w0_SI
 
-    sigma_v = sqrt(consts.kB * p.T_atom / consts.m)   # [m/s]
+    sigma_v = sqrt(consts.kB * p.T_atom / consts.m)
     sigma_v_dimless = sigma_v / v0
 
     g_dimless = consts.g_SI * t0_SI^2 / w0_SI

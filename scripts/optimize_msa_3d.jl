@@ -100,7 +100,6 @@ println("zR_dynamic (μm)      = $zR_dynamic")
 println("g_dimless            = $(consts.g_SI * t0_SI^2 / w0_SI)")
 println("\nRunning 3D MSA optimal control: $n_samples samples (seed=$seed), N_modes_s=$(msa_config.N_modes_s), N_modes_ua=$(msa_config.N_modes_ua)...")
 
-# guess = load_msa_guess_from_file("path/to/previous.h5", params)
 guess = nothing
 
 result = optimize_controls3d_msa(

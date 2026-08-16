@@ -54,7 +54,6 @@ function optimize_controls3d_thermal(
     set_optimizer_attribute(model, "max_iter", max_iter)
     set_optimizer_attribute(model, "tol", 1e-6)
     set_optimizer_attribute(model, "acceptable_tol", 1e-5)
-    # set_optimizer_attribute(model, "linear_solver", linear_solver)
     hessian_approximation && set_optimizer_attribute(model, "hessian_approximation", "limited-memory")
 
     @variable(model, bounds.T_min_fraction * p.maxT <= T <= p.maxT)
@@ -67,7 +66,6 @@ function optimize_controls3d_thermal(
     @expression(model, ux[j=1:n], p.x_start + s[j] * ex)
     @expression(model, uy[j=1:n], p.y_start + s[j] * ey)
 
-    # Per-sample atom state
     x_margin = bounds.r_margin_w * w
     @variable(model, x_s[1:n_samples, 1:n])
     @variable(model, y_s[1:n_samples, 1:n])
@@ -83,19 +81,8 @@ function optimize_controls3d_thermal(
         set_upper_bound(y_s[i, j], x_margin)
         set_lower_bound(z_s[i, j], -bounds.z_margin)
         set_upper_bound(z_s[i, j], bounds.z_margin)
-
-        # The bounds on the individual speeds can be handled directly 
-        # through the energy constraint so we can save the effort here.
-
-        # set_lower_bound(vx_s[i, j], -bounds.v_xy_max)
-        # set_upper_bound(vx_s[i, j], bounds.v_xy_max)
-        # set_lower_bound(vy_s[i, j], -bounds.v_xy_max)
-        # set_upper_bound(vy_s[i, j], bounds.v_xy_max)
-        # set_lower_bound(vz_s[i, j], -bounds.v_z_max)
-        # set_upper_bound(vz_s[i, j], bounds.v_z_max)
     end
 
-    # ── Initial guess ──────────────────────────────────────────────────────────
     if guess !== nothing
         ux_n, uy_n, ua_n, state_guess =
             propagate_guess_states3d(guess, samples, p; consts=consts)
@@ -133,7 +120,6 @@ function optimize_controls3d_thermal(
         end
     end
 
-    # ── Boundary conditions ────────────────────────────────────────────────────
     @constraint(model, -u_margin <= s[1] <= u_margin)
     @constraint(model, L - u_margin <= s[n] <= L + u_margin)
     ua_bc = p.move_in_single_trap ? (p.single_trap_amplitude * p.U0_static / p.U0_aux_max) : 0.0
@@ -157,7 +143,6 @@ function optimize_controls3d_thermal(
         end
     end
 
-    # ── Forces (analytic, inline) ──────────────────────────────────────────────
     @expression(model, Xi_s[i=1:n_samples, j=1:n], z_s[i, j] - cz)
 
     @expression(model, r1sq_s[i=1:n_samples, j=1:n],
@@ -202,7 +187,6 @@ function optimize_controls3d_thermal(
         + ua[j]*p.U0_aux_max*fa_s[i, j]*(wa2/wXia_s[i, j])*(Xi_s[i, j]/zR_a^2)*(4.0*rasq_s[i, j]/wXia_s[i, j]-2.0)
     )
 
-    # ── Velocity Verlet collocation ───────────────────────────────────────────
     for i in 1:n_samples, j in 1:(n-1)
         @constraint(model, x_s[i, j+1] - x_s[i, j] == vx_s[i, j]*dt + 0.5*Fx_s[i, j]*dt^2)
         @constraint(model, y_s[i, j+1] - y_s[i, j] == vy_s[i, j]*dt + 0.5*Fy_s[i, j]*dt^2)
@@ -212,7 +196,6 @@ function optimize_controls3d_thermal(
         @constraint(model, vz_s[i, j+1] - vz_s[i, j] == 0.5*dt*(Fz_s[i, j] + Fz_s[i, j+1]))
     end
 
-    # ── Slew-rate constraints ──────────────────────────────────────────────────
     v_s_max = bounds.v_u_max_per_w * w
     v_ua_max = bounds.v_ua_max
     for j in 1:(n-1)
@@ -222,7 +205,6 @@ function optimize_controls3d_thermal(
         @constraint(model, ua[j]-ua[j+1] <= v_ua_max * dt)
     end
 
-    # ── Trapping constraints ───────────────────────────────────────────────────
     @expression(model, U_st1_s[i=1:n_samples, j=1:n], -static_factor * p.U0_static * f1_s[i, j])
     @expression(model, U_st2_s[i=1:n_samples, j=1:n], -static_factor * p.U0_static * f2_s[i, j])
     @expression(model, U_aux_s[i=1:n_samples, j=1:n], -ua[j] * p.U0_aux_max * fa_s[i, j])
@@ -236,13 +218,8 @@ function optimize_controls3d_thermal(
         @constraint(model, [i=1:n_samples, j=2:(n-1)], E_tot_s[i, j] <= p.trap_fraction * U_tot_s[i, j])
     end
 
-    # ── Objective ──────────────────────────────────────────────────────────────
-    # println("λ_heat = $(p.lambda_heat), λ_jitter_pos = $(p.lambda_jitter_pos), λ_jitter_ua = $(p.lambda_jitter_ua)")
-    # @expression(model, heat_s[i=1:n_samples],
-    #     sum(-(U_st1_s[i, j]+U_st2_s[i, j]+U_aux_s[i, j]) for j=1:n))
     @objective(model, Min,
         T
-        # + p.lambda_heat * dt * sum(heat_s[i] for i=1:n_samples) / n_samples
         + p.lambda_jitter_ua * sum((ua[j+1]-ua[j])^2 for j=10:(n-10))
         + p.lambda_jitter_pos * sum((s[j+1]-s[j])^2 for j=1:(n-1))
     )

@@ -26,7 +26,6 @@ def plot_control_protocol_3d(data: Dict, output_dir: Path):
 
     pos_label = f"[w₀ = {w0_um:.1f} μm]"
 
-    # ── ux ────────────────────────────────────────────────────────────────────
     ax = axes[0]
     ax.plot(t, ux, color=COLOR_AUX, lw=2.0, label="ux (aux tweezer)")
     ax.axhline(
@@ -46,7 +45,6 @@ def plot_control_protocol_3d(data: Dict, output_dir: Path):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # ── uy ────────────────────────────────────────────────────────────────────
     ax = axes[1]
     ax.plot(t, uy, color=COLOR_AUX, lw=2.0, label="uy (aux tweezer)")
     ax.axhline(
@@ -66,7 +64,6 @@ def plot_control_protocol_3d(data: Dict, output_dir: Path):
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # ── ua ────────────────────────────────────────────────────────────────────
     ax = axes[2]
     ax.plot(t, ua, color=COLOR_AUX, lw=2.0, label="ua (amplitude)")
     ax.fill_between(t, 0, ua, color=COLOR_AUX, alpha=0.20)

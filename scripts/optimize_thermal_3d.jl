@@ -65,7 +65,7 @@ params = TweezerParams3D(
     final_trap_fraction=0.2,
 )
 
-v_xy_max_mps = 0.4      # m/s
+v_xy_max_mps = 0.4
 v_xy_max = check_transport_feasibility(v_xy_max_mps, dist_um, params.maxT)
 
 bounds = ControlBounds3D(
@@ -93,7 +93,6 @@ println("\nRunning 3D thermal optimal control with $n_samples samples (seed=$see
 
 file = "C://dev//GitHub//Optimal-Control-of-Atomic-Motion-in-Optical-Tweezer-Arrays//ResultsForThesis//control3d_thermal_2026-07-05_21-03-39.h5"
 guess = load_guess_from_file(file, params)
-#guess = nothing
 
 result = optimize_controls3d_thermal(
     params;
@@ -105,7 +104,7 @@ result = optimize_controls3d_thermal(
     hessian_approximation=false,
     print_level=5,
     consts=consts,
-    linear_solver="spral",   # "spral" for an apples-to-apples baseline
+    linear_solver="spral",
     fix_final_pos=false
 )
 

@@ -15,8 +15,8 @@ from utils3d import COLOR_ALIVE, COLOR_LOST
 
 
 def plot_survival_3d(data: Dict, output_dir: Path):
-    t       = data["t"]           # (n_steps,) [μs dimless]
-    is_lost = data["is_lost"]     # (n_steps, n_shots) bool
+    t       = data["t"]
+    is_lost = data["is_lost"]
     n_shots = is_lost.shape[1]
 
     n_lost_at_t     = np.sum(is_lost, axis=1)
@@ -25,7 +25,6 @@ def plot_survival_3d(data: Dict, output_dir: Path):
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
 
-    # ── Top: atom counts ───────────────────────────────────────────────────────
     ax1.fill_between(t, 0, n_survived_at_t,
                      color=COLOR_ALIVE, alpha=0.35, label="Survived")
     ax1.fill_between(t, n_survived_at_t, n_shots,
@@ -42,7 +41,6 @@ def plot_survival_3d(data: Dict, output_dir: Path):
         f"({survival_pct[-1]:.1f}%)",
         fontsize=12, fontweight="bold")
 
-    # ── Bottom: survival rate ──────────────────────────────────────────────────
     ax2.plot(t, survival_pct, color=COLOR_ALIVE, lw=2.5)
     ax2.fill_between(t, 0, survival_pct, color=COLOR_ALIVE, alpha=0.25)
     ax2.axhline(100, color="gray", ls="--", lw=1, alpha=0.5)

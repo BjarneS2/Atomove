@@ -1,17 +1,5 @@
 """
 Phase-space animation for 3D forward dynamics.
-
-Four subplots in one high-resolution figure, animated over time:
-  (x, vx)  |  (y, vy)
-  (z, vz)  |  (r, vr)   ← spherical radial coordinate
-
-Harmonic-approximation trapping ellipses are drawn for the static tweezers
-at start and stop (once the aux is gone, the ellipse relevant to the final
-trap is shown).
-
-Atoms colour-coded: survived = green, lost = grey.
-
-Output: a high-DPI GIF so the user can zoom in.
 """
 
 import numpy as np
@@ -30,9 +18,6 @@ from utils3d import (
 
 
 def _draw_ellipses(ax, subplot, params, scales):
-    """
-    Draw 1-σ and 2-σ harmonic trapping ellipses appropriate for each subplot.
-    """
     U0   = params["U0_static"]
     w    = params["w"]
     zR   = params["zR"]
@@ -46,7 +31,7 @@ def _draw_ellipses(ax, subplot, params, scales):
         xe1, ve1 = trap_ellipse_z(U0, zR, T_a)
         xe2, ve2 = trap_ellipse_z(U0, zR, 2 * T_a)
         return xe1, ve1, xe2, ve2
-    else:   # spherical — approximate as xy
+    else:
         xe1, ve1 = trap_ellipse_xy(U0, w, T_a)
         xe2, ve2 = trap_ellipse_xy(U0, w, 2 * T_a)
         return xe1, ve1, xe2, ve2
@@ -54,11 +39,6 @@ def _draw_ellipses(ax, subplot, params, scales):
 
 def animate_phase_space_3d(data: Dict, output_dir: Path,
                             fps: int = 15, dpi: int = 180):
-    """
-    Parameters
-    ----------
-    dpi : 180 is high enough to zoom; keep fps low to keep file size manageable.
-    """
     t       = data["t"]
     x       = data["x"];   vx = data["vx"]
     y       = data["y"];   vy = data["vy"]
@@ -74,7 +54,6 @@ def animate_phase_space_3d(data: Dict, output_dir: Path,
     skip   = max(1, n_steps // 150)
     frames = list(range(0, n_steps, skip))
 
-    # pre-compute ellipses
     def _ell(subplot):
         return _draw_ellipses(None, subplot, params, scales)
 
@@ -83,7 +62,6 @@ def animate_phase_space_3d(data: Dict, output_dir: Path,
     ell_z  = _ell("z")
     ell_r  = _ell("r")
 
-    # global limits
     def lim(arr, pad=0.15):
         lo, hi = arr.min(), arr.max()
         d = (hi - lo) * pad or 0.5
@@ -94,7 +72,6 @@ def animate_phase_space_3d(data: Dict, output_dir: Path,
     zlim  = lim(z_arr); vzlim = lim(vz)
     rlim  = (0, lim(r_arr)[1]); vrlim = lim(vr_arr)
 
-    # ── Figure ─────────────────────────────────────────────────────────────────
     fig, axes = plt.subplots(2, 2, figsize=(14, 12))
     fig.patch.set_facecolor("white")
     plt.subplots_adjust(hspace=0.35, wspace=0.30)
@@ -120,7 +97,6 @@ def animate_phase_space_3d(data: Dict, output_dir: Path,
         ax.axhline(0, color="k", lw=0.5, alpha=0.3)
         ax.grid(alpha=0.25, ls=":")
 
-        # ellipses (drawn at origin; they represent the local trap geometry)
         xe1, ve1, xe2, ve2 = ell
         ax.plot(xe1, ve1, color="steelblue", lw=1.5, ls="--",
                 alpha=0.7, label="1σ trap")

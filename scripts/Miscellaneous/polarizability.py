@@ -1,90 +1,26 @@
 """
-Cesium (Cs-133) dynamic polarizability plots -- COMBINED script.
-
-Merges two earlier standalone scripts (physics unchanged):
-
-  PART A (was cs_magic_wavelength script):
-    - Full-range 6s-7p_1/2 magic-wavelength crossing plot (published Table V values)
-      plus one schematic "pole-to-pole" branch.
-    - Ground-state (6s_1/2) polarizability across the D1/D2 resonances (800-1400 nm).
-
-  PART B (was cs133_933_vs_1064 script):
-    - Ground-state (6s_1/2) vs excited-state (6p_3/2, D2 line) polarizability,
-      comparing a near-magic 933 nm trap against a non-magic 1064 nm (Nd:YAG) trap,
-      including a numeric solve for the magic wavelength on that branch.
-
-Based on the sum-over-states formula (Eq. 2 of Safronova, Safronova & Clark,
-"Magic wavelengths, matrix elements, polarizabilities, and lifetimes of Cs",
-arXiv:1605.05210):
-
-    alpha_0(v; omega) = [2 / (3*(2*j_v+1))] * sum_k  D_k^2 * w_k / (w_k^2 - omega^2)
-
-where D_k = <k||D||v> is the reduced electric-dipole matrix element (atomic
-units, e*a0) between state v and intermediate state k, and w_k = E_k - E_v is
-the transition (angular) frequency in atomic units (Hartree).
-
-Notes carried over from the original files:
-
-  * Only the ground state (6s_1/2) is computed from real matrix elements in
-    PART A (D1/D2 lines dominate, well known from Steck's "Cesium D Line Data" /
-    lifetime measurements). The excited-state (7p_1/2) curve used in the
-    "published magic wavelengths" and "schematic branch" plots is NOT computed
-    from first principles:
-      - the crossing points/values come directly from Table V of the paper
-        (these are exact, published numbers), and
-      - the "one branch" schematic shape uses quantum-defect-estimated pole
-        positions, calibrated only to pass through one real crossing point.
-    Swap in real matrix elements if you have them (e.g. from the paper's
-    supplemental material) for a fully first-principles 7p_1/2 curve.
-
-  * In PART B, the excited state (6p_3/2) IS computed from matrix elements:
-    sum over 6s (downward), 7s, 5d3/2, 5d5/2, 6d3/2, 6d5/2, 7d3/2, 7d5/2
-    (upward). Matrix elements from Table I of arXiv:1605.05210. The 6d/7d
-    energies are fixed from the *measured* 6p3/2->6d/7d transition wavelengths
-    (921.47 nm, 917.47 nm, 697.52 nm) reported in Zhang et al., Proc. SPIE
-    8440, 84400Q (2012).
-
-author: Bjarne Schümann
+Cesium (Cs-133) dynamic polarizability plots.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import brentq
 
-# ----------------------------------------------------------------------
-# Constants / conversion factors
-# ----------------------------------------------------------------------
-HARTREE_CM = 219474.6313705  # cm^-1 per Hartree (atomic unit of energy)
+HARTREE_CM = 219474.6313705
 
-# ----------------------------------------------------------------------
-# Ground-state (6s_1/2) matrix elements and transition energies
-# D1 line: 6s -> 6p_1/2 ,  D2 line: 6s -> 6p_3/2
-# Matrix elements in atomic units (e*a0); energies in cm^-1.
-# These are the well-established, precisely measured D-line values
-# (see Steck, "Cesium D Line Data", steck.us/alkalidata).
-# ----------------------------------------------------------------------
-D1_MATRIX_ELEMENT = 4.489  # <6s||D||6p_1/2>
-D2_MATRIX_ELEMENT = 6.324  # <6s||D||6p_3/2>
-E_6P1_CM = 11178.27  # cm^-1  (-> lambda_D1 = 894.59 nm)
-E_6P3_CM = 11732.31  # cm^-1  (-> lambda_D2 = 852.35 nm)
+D1_MATRIX_ELEMENT = 4.489
+D2_MATRIX_ELEMENT = 6.324
+E_6P1_CM = 11178.27
+E_6P3_CM = 11732.31
 
-# Ionic-core polarizability + core-valence counterterm (paper, Sec. V):
-# alpha_core (RPA) = 15.84 a.u., alpha_vc = -0.673 a.u. for the 6s state.
 ALPHA_CORE = 15.84 - 0.673
 
 
 def alpha_6s(lam_nm):
-    """
-    Scalar dynamic polarizability of Cs 6s_1/2 (atomic units, a0^3),
-    computed from the sum-over-states formula restricted to the two
-    dominant (D1, D2) resonances plus the ionic-core term.
-
-    lam_nm : wavelength(s) in nm (scalar or numpy array)
-    """
     lam_nm = np.asarray(lam_nm, dtype=float)
-    omega = (1e7 / lam_nm) / HARTREE_CM  # probe frequency, a.u.
-    w1 = E_6P1_CM / HARTREE_CM  # D1 transition frequency, a.u.
-    w2 = E_6P3_CM / HARTREE_CM  # D2 transition frequency, a.u.
+    omega = (1e7 / lam_nm) / HARTREE_CM
+    w1 = E_6P1_CM / HARTREE_CM
+    w2 = E_6P3_CM / HARTREE_CM
     term = (
         D1_MATRIX_ELEMENT**2 * w1 / (w1**2 - omega**2)
         + D2_MATRIX_ELEMENT**2 * w2 / (w2**2 - omega**2)
@@ -92,18 +28,12 @@ def alpha_6s(lam_nm):
     return term + ALPHA_CORE
 
 
-# ----------------------------------------------------------------------
-# Excited state: 6p_3/2 (D2 upper level)  [PART B]
-# ----------------------------------------------------------------------
 def _Ek_from_6p32_transition(lam_from_6p32_nm):
-    """Convert a measured 6p3/2->k transition wavelength into an absolute
-    level energy E_k (cm^-1, relative to the 6s ground state)."""
     return E_6P3_CM + 1e7 / lam_from_6p32_nm
 
 
-# (label, matrix element <6p3/2||D||k> [a.u.], E_k [cm^-1])
 TERMS_6P32 = [
-    ("6s", 6.324, 0.0),  # downward
+    ("6s", 6.324, 0.0),
     ("7s", 6.48, 18535.53),
     ("5d3/2", 3.19, 14499.4),
     ("5d5/2", 9.7, 14596.84),
@@ -117,7 +47,6 @@ PREFACTOR_6P32 = 2.0 / (3.0 * (2 * JV_6P32 + 1))
 
 
 def alpha_6p32(lam_nm):
-    """Cs-133 excited-state (6p_3/2) scalar dynamic polarizability, a.u."""
     lam_nm = np.asarray(lam_nm, dtype=float)
     omega = (1e7 / lam_nm) / HARTREE_CM
     total = np.zeros_like(omega)
@@ -127,11 +56,6 @@ def alpha_6p32(lam_nm):
     return PREFACTOR_6P32 * total + ALPHA_CORE
 
 
-# ----------------------------------------------------------------------
-# Published magic wavelengths for the 6s-7p_1/2 transition  [PART A]
-# (Table V of arXiv:1605.05210) -- these are EXACT values from the paper,
-# not computed here. Format: (wavelength [nm], alpha at crossing [a.u.], label)
-# ----------------------------------------------------------------------
 TABLE_V_6S_7P1 = [
     (1172.40, 866, "14s"),
     (1189.3, 838, "12d3/2"),
@@ -145,9 +69,6 @@ TABLE_V_6S_7P1 = [
 ]
 
 
-# ========================================================================
-# PLOT 1 [PART A]: full-range crossing plot + one schematic "pole-to-pole" branch
-# ========================================================================
 def plot_magic_wavelength_figure(save_path="cs_magic_wavelength.pdf"):
     xv = np.array([p[0] for p in TABLE_V_6S_7P1])
     yv = np.array([p[1] for p in TABLE_V_6S_7P1])
@@ -157,7 +78,6 @@ def plot_magic_wavelength_figure(save_path="cs_magic_wavelength.pdf"):
 
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.6))
 
-    # ---- Panel 1: global view over the paper's own tabulated range ----
     ax = axes[0]
     ax.plot(
         lam,
@@ -166,7 +86,7 @@ def plot_magic_wavelength_figure(save_path="cs_magic_wavelength.pdf"):
         lw=2.2,
         label=r"$\alpha(6s_{1/2})$  (computed, Eq. 2)",
     )
-    ax.plot(xv, yv, color="#c0392b", lw=1.2, ls=":", alpha=0.6)  # guide-the-eye only
+    ax.plot(xv, yv, color="#c0392b", lw=1.2, ls=":", alpha=0.6)
     ax.scatter(
         xv,
         yv,
@@ -193,13 +113,10 @@ def plot_magic_wavelength_figure(save_path="cs_magic_wavelength.pdf"):
     ax.grid(alpha=0.3)
     ax.set_ylim(400, 950)
 
-    # ---- Panel 2: schematic zoom of ONE branch, showing the true pole-to-pole shape ----
-    # Pole positions here are illustrative (quantum-defect estimates), NOT taken from the
-    # paper -- only the crossing value (1535 nm, 580 a.u.) is a real published number.
     lamA, lamB = (
         1421.0,
         1538.1,
-    )  # nm, schematic resonance positions bounding this branch
+    )
 
     def w(lnm):
         return (1e7 / lnm) / HARTREE_CM
@@ -210,8 +127,6 @@ def plot_magic_wavelength_figure(save_path="cs_magic_wavelength.pdf"):
         ww = w(lnm)
         return np.array([wA / (wA**2 - ww**2), wB / (wB**2 - ww**2)])
 
-    # Solve two schematic amplitudes so the branch passes through the real
-    # crossing (1535 nm, 580 a.u.) and (arbitrarily, for a nice shape) zero at 1480 nm.
     Amat = np.array([M(1535.0), M(1480.0)])
     bvec = np.array([580, 0])
     A, B = np.linalg.solve(Amat, bvec)
@@ -259,14 +174,10 @@ def plot_magic_wavelength_figure(save_path="cs_magic_wavelength.pdf"):
     print(f"Saved {save_path}")
 
 
-# ========================================================================
-# PLOT 2 [PART A]: ground-state polarizability across the D1/D2 resonances (800-1400 nm)
-# ========================================================================
 def plot_ground_state_800_1400(save_path="cs_6s_polarizability_800_1400.pdf"):
-    lam_D1 = 1e7 / E_6P1_CM  # 894.59 nm
-    lam_D2 = 1e7 / E_6P3_CM  # 852.35 nm
+    lam_D1 = 1e7 / E_6P1_CM
+    lam_D2 = 1e7 / E_6P3_CM
 
-    # Dense grid, skipping points too close to the poles (avoids inf/nan spikes)
     lam = np.linspace(800, 1400, 6000)
     eps = 0.05
     for pole in (lam_D1, lam_D2):
@@ -294,7 +205,6 @@ def plot_ground_state_800_1400(save_path="cs_6s_polarizability_800_1400.pdf"):
     )
     ax.grid(alpha=0.3)
 
-    # shaded regions + labels
     ax.axvspan(800, lam_D2, color="tab:red", alpha=0.05)
     ax.axvspan(lam_D2, lam_D1, color="tab:orange", alpha=0.08)
     ax.axvspan(lam_D1, 1400, color="tab:green", alpha=0.05)
@@ -320,9 +230,6 @@ def plot_ground_state_800_1400(save_path="cs_6s_polarizability_800_1400.pdf"):
     print(f"Saved {save_path}")
 
 
-# ========================================================================
-# PLOT 3 [PART B]: 6s_1/2 vs 6p_3/2 at 933 nm vs 1064 nm + magic-wavelength solve
-# ========================================================================
 def plot_933_vs_1064(save_path="cs133_933_vs_1064.pdf"):
     for lam0 in (933.0, 1064.0):
         ag, ae = alpha_6s(lam0), alpha_6p32(lam0)

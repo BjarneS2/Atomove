@@ -1,8 +1,4 @@
-"""
-Visualize the control protocol from 09.06.2026 and 05.07.2026
-same plot, same time axis, top shows position over time, bottom
-show the amplitude over time.
-"""
+"""Compare the control protocols from 09.06.2026 and 05.07.2026."""
 
 from pathlib import Path
 

@@ -8,19 +8,6 @@ using ..ThermalSampling3D
 
 export optimize_controls3d_single
 
-# Single-atom 3D optimal transport.
-#
-# The tweezer moves along the straight line from (x_start, y_start) to
-# (x_stop, y_stop).  The scalar arc-length s[j] ∈ [0, L] parameterises the
-# position along this line, so:
-#   ux[j] = x_start + s[j]*ex,   uy[j] = y_start + s[j]*ey
-# where (ex, ey) is the unit vector along the transport direction and L is
-# the transport distance.  Only s[j] and ua[j] are optimised — the motion
-# stays on the prescribed line by construction.
-#
-# Atom state: (x, y, z, vx, vy, vz) — all six degrees of freedom are free.
-# Gravity acts in the -y direction (g_dimless = g_SI * t0^2 / w0).
-
 function optimize_controls3d_single(
     p::TweezerParams3D;
     guess::Union{Nothing,InitialG3D}=nothing,
@@ -58,7 +45,6 @@ function optimize_controls3d_single(
     @variable(model, bounds.T_min_fraction * p.maxT <= T <= p.maxT)
     @expression(model, dt, T / (n - 1))
 
-    # Arc-length along transport line (s=0 at start, s=L at stop)
     if linear_r
         @expression(model, s[j=1:n], (j - 1) / (n - 1) * L)
     else
@@ -68,11 +54,9 @@ function optimize_controls3d_single(
 
     @variable(model, bounds.ua_min <= ua[1:n] <= bounds.ua_max)
 
-    # Tweezer centre expressed through s
     @expression(model, ux[j=1:n], p.x_start + s[j] * ex)
     @expression(model, uy[j=1:n], p.y_start + s[j] * ey)
 
-    # Atom state variables
     x_margin = bounds.r_margin_w * w
     @variable(model, p.x_start - x_margin <= x[1:n] <= p.x_stop + x_margin)
     @variable(model, -x_margin <= y[1:n] <= x_margin)
@@ -81,7 +65,6 @@ function optimize_controls3d_single(
     @variable(model, -bounds.v_xy_max <= vy[1:n] <= bounds.v_xy_max)
     @variable(model, -bounds.v_z_max <= vz[1:n] <= bounds.v_z_max)
 
-    # ── Initial guess ──────────────────────────────────────────────────────────
     if guess !== nothing
         set_start_value(T, sum(guess.dt))
         n_g = length(guess.ua)
@@ -125,14 +108,14 @@ function optimize_controls3d_single(
             end
         end
     else
-        set_start_value(T, 10.0) # 10us initial guess
+        set_start_value(T, 10.0)
         for j in 1:n
             frac = (j - 1) / (n - 1)
             !linear_r && set_start_value(s[j], frac * L)
             if j == 1 || j == n
                 set_start_value(ua[j], 0.0)
             else
-                set_start_value(ua[j], bounds.ua_max) # some initial auxiliary power in
+                set_start_value(ua[j], bounds.ua_max)
             end
             set_start_value(x[j], p.x_start + frac * (p.x_stop - p.x_start))
             set_start_value(y[j], frac * p.y_stop)
@@ -143,9 +126,8 @@ function optimize_controls3d_single(
         end
     end
 
-    # ── Boundary conditions ────────────────────────────────────────────────────
     if !linear_r
-        @constraint(model, -bounds.u_margin_w * w <= s[1] <= bounds.u_margin_w * w)  # start at s=0 (with some margin)
+        @constraint(model, -bounds.u_margin_w * w <= s[1] <= bounds.u_margin_w * w)
     end
     @constraint(model, ua[1] == 0.0)
     @constraint(model, ua[n] == 0.0)
@@ -161,21 +143,16 @@ function optimize_controls3d_single(
     @constraint(model, y[n] == p.y_stop)
     @constraint(model, vx[n] == 0.0)
     @constraint(model, vy[n] == 0.0)
-    # @constraint(model, vz[n] == 0.0)
 
-    # ── 3D Gaussian beam forces (analytic, inline for JuMP) ───────────────────
-    # Static tweezer 1 at (x_start, 0, 0)
     @expression(model, XiSt[j=1:n], z[j] - cz)
     @expression(model, r1sq[j=1:n], (x[j] - p.x_start)^2 + y[j]^2)
     @expression(model, wXi1[j=1:n], w2 * (1.0 + (XiSt[j]/zR)^2))
     @expression(model, f1[j=1:n], (w2/wXi1[j]) * exp(-2.0*r1sq[j]/wXi1[j]))
 
-    # Static tweezer 2 at (x_stop, y_stop, 0)
     @expression(model, r2sq[j=1:n], (x[j] - p.x_stop)^2 + (y[j] - p.y_stop)^2)
     @expression(model, wXi2[j=1:n], w2 * (1.0 + (XiSt[j]/zR)^2))
     @expression(model, f2[j=1:n], (w2/wXi2[j]) * exp(-2.0*r2sq[j]/wXi2[j]))
 
-    # Aux tweezer at (ux, uy, 0)
     @expression(model, rasq[j=1:n], (x[j] - ux[j])^2 + (y[j] - uy[j])^2)
     @expression(model, wXia[j=1:n], wa2 * (1.0 + (XiSt[j]/zR_a)^2))
     @expression(model, fa[j=1:n], (wa2/wXia[j]) * exp(-2.0*rasq[j]/wXia[j]))
@@ -201,7 +178,6 @@ function optimize_controls3d_single(
         + ua[j]*p.U0_aux_max*fa[j]*(wa2/wXia[j])*(XiSt[j]/zR_a^2)*(4.0*rasq[j]/wXia[j]-2.0)
     )
 
-    # ── Velocity Verlet collocation ───────────────────────────────────────────
     for j in 1:(n-1)
         @constraint(model, x[j+1] - x[j] == vx[j]*dt + 0.5*Fx[j]*dt^2)
         @constraint(model, y[j+1] - y[j] == vy[j]*dt + 0.5*Fy_total[j]*dt^2)
@@ -211,7 +187,6 @@ function optimize_controls3d_single(
         @constraint(model, vz[j+1] - vz[j] == 0.5*dt*(Fz[j] + Fz[j+1]))
     end
 
-    # ── Slew-rate constraints ──────────────────────────────────────────────────
     v_ua_max = bounds.v_ua_max
     for j in 1:(n-1)
         if !linear_r
@@ -223,7 +198,6 @@ function optimize_controls3d_single(
         @constraint(model, ua[j] - ua[j+1] <= v_ua_max * dt)
     end
 
-    # ── Trapping constraint (energy) ───────────────────────────────────────────
     @expression(model, U_st1[j=1:n], -p.U0_static * f1[j])
     @expression(model, U_st2[j=1:n], -p.U0_static * f2[j])
     @expression(model, U_aux[j=1:n], -ua[j] * p.U0_aux_max * fa[j])
@@ -233,7 +207,6 @@ function optimize_controls3d_single(
     @constraint(model, [j=1:n], E_tot[j] <= p.trap_fraction * U_tot[j])
     @constraint(model, E_tot[n] <= p.final_trap_fraction * U_tot[n])
 
-    # ── Objective ──────────────────────────────────────────────────────────────
     @expression(model, heat_term, sum(-(U_st1[j]+U_st2[j]+U_aux[j]) for j=1:n))
     @expression(model, jitter_ua, sum((ua[j+1]-ua[j])^2 for j=10:(n-10)))
 

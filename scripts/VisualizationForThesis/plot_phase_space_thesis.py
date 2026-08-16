@@ -66,16 +66,6 @@ def _plot_snapshot(
 
 
 def _trap_boundary_params(coord_name, params):
-    """
-    Harmonic-approximation trap-boundary ellipse for the static tweezers,
-    consistent with the E_tot <= trap_fraction * U loss criterion in
-    utils3d.compute_loss_mask (evaluated on-axis, single beam):
-
-        radial (x, y): omega_r^2 = 4*U0/w^2   -> pos_max = w / sqrt(2)
-        axial  (z):    omega_z^2 = 2*U0/zR^2  -> pos_max = zR
-
-    In both cases vel_max = sqrt(2*U0*(1 - trap_fraction)).
-    """
     U0 = params["U0_static"]
     trap_fraction = params["trap_fraction"]
     vel_max = np.sqrt(max(2.0 * U0 * (1.0 - trap_fraction), 0.0))
@@ -91,17 +81,6 @@ def _trap_boundary_params(coord_name, params):
 
 
 def _aux_trap_boundary_params(coord_name, data, t_idx):
-    """
-    Harmonic-approximation trap-boundary ellipse for the moving auxiliary
-    tweezer at snapshot t_idx (same derivation as _trap_boundary_params,
-    but the aux beam's depth is modulated by ua(t) and its centre moves
-    with (ux(t), uy(t))).
-
-    The boundary is an ellipse in the *co-moving* frame of the aux tweezer,
-    so its velocity centre must be offset by the tweezer's own local
-    velocity du/dt, not zero — an atom held at the bottom of the aux trap
-    moves along with the tweezer.
-    """
     params = data["params"]
     U0_aux = params["U0_aux_max"] * data["ua"][t_idx]
     trap_fraction = params["trap_fraction"]
@@ -210,7 +189,6 @@ def _plot_phase_space_thesis(
             ax.set_ylim(*vel_lim)
 
         axes[0].legend(loc="best", fontsize=8, framealpha=0.8)
-        # fig.suptitle(f"Phase space — {coord_name}", fontsize=13, fontweight="bold")
         plt.tight_layout()
         savefig_thesis(
             fig,

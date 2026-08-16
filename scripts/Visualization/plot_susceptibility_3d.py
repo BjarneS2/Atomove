@@ -11,10 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils3d import COLOR_ALIVE
 
 
-# ── Data loading ──────────────────────────────────────────────────────────────
-
 def load_susceptibility_3d(h5_path: str):
-    """Return (meta: dict, sweeps: dict-of-dicts)."""
     def _decode(v):
         if isinstance(v, bytes):
             return v.decode()
@@ -37,8 +34,6 @@ def load_susceptibility_3d(h5_path: str):
     return meta, sweeps
 
 
-# ── Plot ──────────────────────────────────────────────────────────────────────
-
 def plot_susceptibility_3d(h5_path: str, save_dir: str|None|Path = None) -> str:
     meta, sweeps = load_susceptibility_3d(h5_path)
 
@@ -47,11 +42,6 @@ def plot_susceptibility_3d(h5_path: str, save_dir: str|None|Path = None) -> str:
     T_atom_uK  = float(meta.get("T_atom",    40e-6)) * 1e6
     T_twz_uK   = float(meta.get("T_tweezer", 287e-6)) * 1e6
 
-    # ── Panel definitions ─────────────────────────────────────────────────────
-    # Layout (3×3, last slot hidden):
-    #   [Temperature]    [Pos offset x]   [Pos offset z]
-    #   [Pos noise]      [Pos drift]      [Amp offset]
-    #   [Amp noise]      [Amp drift]      [  hidden  ]
     panels = [
         {
             "key":    "temperature",
@@ -124,7 +114,7 @@ def plot_susceptibility_3d(h5_path: str, save_dir: str|None|Path = None) -> str:
         pct = 100.0 * sr
         err = 100.0 * np.sqrt(np.clip(sr * (1.0 - sr) / shots, 0, None))
 
-        baseline = 100.0 # pct[0] if len(pct) > 0 else None
+        baseline = 100.0
 
         ax.errorbar(
             xs, pct, yerr=err,
@@ -155,7 +145,6 @@ def plot_susceptibility_3d(h5_path: str, save_dir: str|None|Path = None) -> str:
         fontsize=12, fontweight="bold", y=1.01,
     )
 
-    # ── Save ──────────────────────────────────────────────────────────────────
     if save_dir is None:
         h5_stem    = Path(h5_path).stem
         images_dir = Path(__file__).parent.parent / "images" / h5_stem
@@ -168,8 +157,6 @@ def plot_susceptibility_3d(h5_path: str, save_dir: str|None|Path = None) -> str:
     print(f"Saved: {out}")
     return str(out)
 
-
-# ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2:

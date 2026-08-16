@@ -16,7 +16,7 @@ from utils3d import COLOR_ALIVE, COLOR_LOST
 
 def plot_energy_distributions_3d(data: Dict, output_dir: Path):
     t       = data["t"]
-    KE      = data["KE"]      # (n_steps, n_shots)
+    KE      = data["KE"]
     PE      = data["PE"]
     E_tot   = data["E_tot"]
     is_lost = data["is_lost"]
@@ -36,7 +36,6 @@ def plot_energy_distributions_3d(data: Dict, output_dir: Path):
     row_colors = [("KE", KE), ("PE", PE), ("E_tot", E_tot)]
 
     for col_idx, (label, energy_arr) in enumerate(row_colors):
-        # compute global xlim for this column
         all_vals = energy_arr.flatten()
         finite   = all_vals[np.isfinite(all_vals)]
         xlo, xhi = np.percentile(finite, 1), np.percentile(finite, 99)
@@ -80,7 +79,6 @@ def plot_energy_distributions_3d(data: Dict, output_dir: Path):
             ax.legend(fontsize=7, framealpha=0.7)
             ax.grid(alpha=0.25, ls=":")
 
-            # vertical line: trap boundary
             U0 = params["U0_static"]
             if label == "E_tot":
                 ax.axvline(-params["trap_fraction"] * U0, color="black",

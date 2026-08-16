@@ -12,8 +12,8 @@ sys.path.insert(
     0, str(Path(__file__).resolve().parent.parent / "VisualizationForThesis")
 )
 
-from ReleaseRecapture import ReleaseRecapture  # noqa: E402
-from style_thesis import savefig_thesis, style_axes  # noqa: E402
+from ReleaseRecapture import ReleaseRecapture
+from style_thesis import savefig_thesis, style_axes
 
 HERE = Path(__file__).resolve().parent
 OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "ResultsForThesis"
@@ -134,12 +134,11 @@ plt.tight_layout()
 OUTPUT_DIR.mkdir(exist_ok=True)
 savefig_thesis(fig, OUTPUT_DIR / "release_recapture_best_fits_thesis.png")
 
-# --- chi^2 jitter comparison for the 0.9 mW run: n=50000 (reproduced) vs n=70000 ---
 P_chi2 = 0.9
 T_lo, T_hi = 25e-6, 47e-6
 region_mask = (T_vec >= T_lo) & (T_vec <= T_hi)
 
-chi_sq_50k = chi_sq_by_power[P_chi2]  # same seed, same n as the run above -> reproduced
+chi_sq_50k = chi_sq_by_power[P_chi2]
 _, chi_sq_70k = run_chi_sq(P_chi2, n=70000)
 
 runs = [

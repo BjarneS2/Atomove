@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "Visualization"))
-from utils3d import compute_loss_mask, potential3d, total_energy  # type: ignore
+from utils3d import compute_loss_mask, potential3d, total_energy
 
 
 def transport_unit_vector(params):

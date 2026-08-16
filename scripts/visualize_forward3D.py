@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-# ── Make sure ./scripts/Visualization is on the import path ───────────────────
 _THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(_THIS_DIR / "Visualization"))
 
@@ -14,39 +13,23 @@ from plot_phase_space_3d import animate_phase_space_3d
 from plot_survival_3d import plot_survival_3d
 from plot_trajectories_3d import plot_trajectories_3d
 
-# ── Visualization modules ──────────────────────────────────────────────────────
 from plot_transport_3d import create_transport_animation_3d
 from utils3d import compute_loss_mask, total_energy
 
-# ── Toggle flags ───────────────────────────────────────────────────────────────
-ENABLE_TRANSPORT_ANIMATION = False  # 3D animated transport (GIF)
-ENABLE_SURVIVAL = True  # survival rate over time (PNG)
-ENABLE_PHASE_SPACE = False  # phase-space animation x/y/z/r (GIF)
-ENABLE_ENERGY = True  # energy distributions at 3 snapshots (PNG)
-ENABLE_TRAJECTORIES = True  # x/y/z + vx/vy/vz vs time (PNG)
-ENABLE_CONTROL_PROTOCOL = True  # ux / uy / ua vs time (PNG)
+ENABLE_TRANSPORT_ANIMATION = False
+ENABLE_SURVIVAL = True
+ENABLE_PHASE_SPACE = False
+ENABLE_ENERGY = True
+ENABLE_TRAJECTORIES = True
+ENABLE_CONTROL_PROTOCOL = True
 
-# ── Animation settings ─────────────────────────────────────────────────────────
 FPS_TRANSPORT = 20
 FPS_PHASE_SPACE = 15
-DPI_TRANSPORT = 120  # 3D rendering is slow; keep moderate
-DPI_PHASE_SPACE = 180  # high-res so user can zoom
-
-
-# ── Data loading ───────────────────────────────────────────────────────────────
+DPI_TRANSPORT = 120
+DPI_PHASE_SPACE = 180
 
 
 def load_forward3d(file_path: Path) -> dict:
-    """
-    Load a forward3d_*.h5 file produced by run_forward_3d.jl.
-
-    HDF5 layout (all in dimensionless units):
-      datasets : t, ux, uy, ua, x, y, z, vx, vy, vz  (x/v are n_steps × n_shots)
-      attrs    : w, x_start, y_start, x_stop, y_stop,
-                 T_atom, T_tweezer, w0_um, t0_us, survival_rate, ...
-
-    Returns a flat dict with numpy arrays and a nested 'params' sub-dict.
-    """
     with h5py.File(file_path, "r") as f:
         t = f["t"][:]
         ux = f["ux"][:]
@@ -54,7 +37,7 @@ def load_forward3d(file_path: Path) -> dict:
         ua = f["ua"][:]
         x = np.array(
             f["x"]
-        ).T  # Julia writes (n_steps, n_shots); h5py reads transposed → fix to (n_steps, n_shots)
+        ).T
         y = np.array(f["y"]).T
         z = np.array(f["z"]).T
         vx = np.array(f["vx"]).T
@@ -105,10 +88,8 @@ def load_forward3d(file_path: Path) -> dict:
     )
 
     scales = compute_scales(T_tweezer, w0_um, DEFAULTS)
-    # dimensionless temperature ratio used for ellipse sizing
     scales["T_atom_dimless"] = T_atom / T_tweezer
 
-    # ── Derive loss mask from energy criterion ─────────────────────────────────
     print("Computing loss mask from energy criterion …")
     is_lost = compute_loss_mask(
         x,
@@ -126,7 +107,6 @@ def load_forward3d(file_path: Path) -> dict:
         g_dimless,
     )
 
-    # ── Energy arrays ──────────────────────────────────────────────────────────
     print("Computing energies …")
     KE, PE, E_tot = total_energy(x, y, z, vx, vy, vz, ux, uy, ua, params, g_dimless)
 
@@ -159,9 +139,6 @@ def _output_dir(file_path: Path) -> Path:
     out = _THIS_DIR.parent / "images" / file_path.stem
     out.mkdir(parents=True, exist_ok=True)
     return out
-
-
-# ── Main ───────────────────────────────────────────────────────────────────────
 
 
 def main():

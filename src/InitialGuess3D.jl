@@ -7,8 +7,6 @@ using ..ForwardDynamics3D
 export linear_sweep_guess, sta_guess, load_guess_from_file, load_params_from_file
 export propagate_guess_states3d
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
-
 function _zero_state_guess(p::TweezerParams3D, T::Float64,
                             s_profile::AbstractVector{Float64})
     n  = p.n
@@ -18,7 +16,6 @@ function _zero_state_guess(p::TweezerParams3D, T::Float64,
     ux = p.x_start .+ s_profile .* ex
     uy = p.y_start .+ s_profile .* ey
 
-    # Atom co-moving with tweezer centre, z=0, all velocities zero
     return InitialG3D(
         dt_vec,
         copy(ux), zeros(n), zeros(n),
@@ -27,24 +24,12 @@ function _zero_state_guess(p::TweezerParams3D, T::Float64,
     )
 end
 
-# ── Linear sweep ───────────────────────────────────────────────────────────────
-# Tweezer moves at constant velocity from start to stop.
-# T defaults to half of params.maxT if not provided.
-
 function linear_sweep_guess(p::TweezerParams3D; T::Float64 = p.maxT / 2.0)
     n = p.n
     L = transport_length(p)
     s_profile = [L * (j - 1) / (n - 1) for j in 1:n]
     return _zero_state_guess(p, T, s_profile)
 end
-
-# ── Shortcut to adiabaticity (STA) ────────────────────────────────────────────
-# Uses a 5th-order polynomial s(τ) with τ ∈ [0,1]:
-#   s(τ) = L · (10τ³ - 15τ⁴ + 6τ⁵)
-# This satisfies s(0)=0, s(1)=L, ṡ(0)=ṡ(1)=0, s̈(0)=s̈(1)=0 — the atom
-# starts and ends at rest without acceleration, giving a smooth, minimal-jerk
-# trajectory.  The atom trajectory is taken as co-moving with the tweezer.
-# T defaults to half of params.maxT if not provided.
 
 function sta_guess(p::TweezerParams3D; T::Float64 = p.maxT / 2.0)
     n = p.n
@@ -59,28 +44,15 @@ function sta_guess(p::TweezerParams3D; T::Float64 = p.maxT / 2.0)
     return _zero_state_guess(p, T, s_profile)
 end
 
-# ── Load from HDF5 file ────────────────────────────────────────────────────────
-# Reads a previously saved result and resamples all trajectories onto the
-# n-point grid of `p` using linear interpolation.
-#
-# Supported file formats:
-#   3D (optimize_single_3d / optimize_thermal_3d):
-#     datasets: t, x, y, z, vx, vy, vz, ux, uy, ua
-#   2D (optimize_thermal2d):
-#     datasets: t, x, v, ux, ua
-#     Missing y/z dimensions are filled with zeros; uy is held at p.y_start.
-
 function load_guess_from_file(path::AbstractString, p::TweezerParams3D)
     t_src, x_src, y_src, z_src, vx_src, vy_src, vz_src, ux_src, uy_src, ua_src =
         h5open(path, "r") do f
             if haskey(f, "y")
-                # 3D file
                 read(f, "t"),
                 read(f, "x"), read(f, "y"), read(f, "z"),
                 read(f, "vx"), read(f, "vy"), read(f, "vz"),
                 read(f, "ux"), read(f, "uy"), read(f, "ua")
             else
-                # 2D file: x-only transport; fill transverse dims with zeros
                 t   = read(f, "t")
                 x   = read(f, "x")
                 v   = read(f, "v")
@@ -118,11 +90,6 @@ function load_guess_from_file(path::AbstractString, p::TweezerParams3D)
     )
 end
 
-# ── Resample a guess's controls onto an n-point grid ──────────────────────────
-# Same index-fraction interpolation used previously inline in
-# TweezerControls3DThermal.jl, extracted so it can be shared with
-# propagate_guess_states3d below.
-
 function _resample_control3d(guess::InitialG3D, n::Int)
     T   = sum(guess.dt)
     n_g = length(guess.ua)
@@ -146,15 +113,6 @@ function _resample_control3d(guess::InitialG3D, n::Int)
     ua_n = [interp_guess(guess.ua, j) for j in 1:n]
     return t_grid, ux_n, uy_n, ua_n
 end
-
-# ── Forward-propagate per-sample states under a guess control ────────────────
-# Reuses the control trajectory (ux, uy, ua) from `guess` as-is, but instead of
-# reusing its (seed-specific) atom states, forward-simulates the dynamics
-# implied by that control for each of the freshly-drawn `samples` initial
-# conditions. `simulate_forward3d` uses the exact same velocity-Verlet
-# recursion and force law as the NLP's dynamics constraints, so the resulting
-# per-sample trajectories are (up to move_in_single_trap) dynamically
-# consistent warm starts for x_s/y_s/z_s/vx_s/vy_s/vz_s.
 
 function propagate_guess_states3d(guess::InitialG3D, samples, p::TweezerParams3D;
                                    consts::PhysicalConstants3D = default_constants3d())
@@ -230,11 +188,9 @@ function load_params_from_file(path::AbstractString)
     end
 end
 
-# Linear interpolation on a sorted grid (no external packages required).
 function _linterp(t::AbstractVector{Float64}, v::AbstractVector{Float64}, t0::Float64)
     t0 <= t[1]   && return v[1]
     t0 >= t[end] && return v[end]
-    # binary search for the interval
     lo, hi = 1, length(t)
     while hi - lo > 1
         mid = (lo + hi) >>> 1

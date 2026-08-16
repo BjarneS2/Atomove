@@ -16,7 +16,7 @@ export optimize_controls3d_msa, load_msa_guess_from_file
 Base.@kwdef struct MSAConfig3D
     N_modes_s::Int = 10
     N_modes_ua::Int = 8
-    ua_mode::Symbol = :fourier   # :fourier or :square
+    ua_mode::Symbol = :fourier
     lambda_slosh::Float64 = 0.0
     lambda_mse::Float64 = 0.0
     use_primary::Bool = true

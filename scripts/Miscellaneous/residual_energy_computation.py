@@ -1,12 +1,6 @@
 """
 Residual-energy and phase-space analysis for 3D single-atom transport.
 
-Mirrors the Julia forward model (Models3D.jl): dimensionless units
-(1 um, 1 us, v0 = 1 m/s, E0 = m*v0^2), two static Gaussian traps + one moving
-auxiliary trap, gravity along -y. Integration: 4th-order symplectic (Yoshida),
-verified by energy conservation during a post-protocol hold of 2x the
-transport time. All protocols share the same seeded initial ensemble.
-
 Usage:
     python residual_energy_3d.py
     python residual_energy_3d.py --protocol path/to/control3d_*.h5
@@ -24,9 +18,8 @@ W0_SI, T0_SI = 1e-6, 1e-6
 V0 = W0_SI / T0_SI
 E0 = M_CS * V0**2
 G_DIMLESS = G_SI * T0_SI**2 / W0_SI
-UK = E0 / kB * 1e6  # dimensionless energy → µK
+UK = E0 / kB * 1e6
 
-# Yoshida 4th-order coefficients
 _W1 = 1.0 / (2.0 - 2.0 ** (1 / 3))
 _W0 = -(2.0 ** (1 / 3)) * _W1
 YC = np.array([_W1 / 2, (_W0 + _W1) / 2, (_W0 + _W1) / 2, _W1 / 2])
@@ -43,7 +36,7 @@ class Params3D:
     y_start: float = 0.0
     x_stop: float = 8 * 4.6
     y_stop: float = 0.0
-    U0_static: float = kB * 287e-6 / E0  # trap depth = kB*T_tweezer
+    U0_static: float = kB * 287e-6 / E0
     U0_aux_max: float = 2 * kB * 287e-6 / E0
     T_atom: float = 4e-6
     starting_trap_fraction: float = 0.8
@@ -53,9 +46,6 @@ class Params3D:
     @property
     def w_aux(self):
         return self.w * self.w_aux_factor
-
-
-# ── Potential and forces (Grimm Eq. 42, identical to Models3D.jl) ─────────────
 
 
 def _beam_U(x, y, z, cx, cy, cz, U0, w, zR):
@@ -96,9 +86,6 @@ def forces(x, y, z, ux, uy, ua, p: Params3D):
     )
 
 
-# ── Thermal sampling (rejection on the starting-trap criterion) ───────────────
-
-
 def sample_thermal(p: Params3D, n_atoms: int, rng: np.random.Generator):
     Tdim = kB * p.T_atom / E0
     om_r2 = 4.0 * p.U0_static / p.w**2
@@ -119,9 +106,6 @@ def sample_thermal(p: Params3D, n_atoms: int, rng: np.random.Generator):
     return out[:, :n_atoms]
 
 
-# ── Control protocols ─────────────────────────────────────────────────────────
-
-
 def _ramp(s):
     return 0.5 * (1.0 - np.cos(np.pi * np.clip(s, 0, 1)))
 
@@ -137,7 +121,6 @@ def _minjerk_dd(s, T):
 
 
 def make_protocol(kind, p: Params3D, T_move, dt=0.05, t_ramp=20.0, hold=None):
-    """Timeline: ua ramp-up, move (T_move), ua ramp-down, hold (default 2*T_move)."""
     hold = 2 * T_move if hold is None else hold
     T_tot = 2 * t_ramp + T_move + hold
     t = np.arange(0.0, T_tot + dt, dt)
@@ -149,7 +132,6 @@ def make_protocol(kind, p: Params3D, T_move, dt=0.05, t_ramp=20.0, hold=None):
     elif kind == "minjerk":
         shape = _minjerk(s)
     elif kind == "sta":
-        # trap follows u(t) = x_c + x_c''/omega^2, atom reference x_c = min-jerk
         om2 = 4.0 * (p.U0_aux_max + p.U0_static) / p.w_aux**2
         shape = _minjerk(s) + _minjerk_dd(s, T_move) / om2
     else:
@@ -170,7 +152,6 @@ def make_protocol(kind, p: Params3D, T_move, dt=0.05, t_ramp=20.0, hold=None):
 
 
 def load_protocol(path, p: Params3D, dt=0.05, hold=None, T_move_hint=100.0):
-    """Load t, ux, uy, ua from control3d_*.h5 / .npz / .csv, resample, append hold."""
     path = Path(path)
     if path.suffix == ".h5":
         import h5py
@@ -195,9 +176,6 @@ def load_protocol(path, p: Params3D, dt=0.05, hold=None, T_move_hint=100.0):
         t_hold_start=t[-1],
         label=path.stem,
     )
-
-
-# ── Forward simulation: 4th-order Yoshida, control interpolated at substeps ───
 
 
 def simulate(proto, p: Params3D, init, n_energy_samples=200):
@@ -241,14 +219,12 @@ def simulate(proto, p: Params3D, init, n_energy_samples=200):
 
         if j % e_stride == 0:
             e_t.append(t[j + 1])
-            e_mean.append(Etot.mean())  # all atoms: conserved in static hold
+            e_mean.append(Etot.mean())
 
     return (x, y, z, vx, vy, vz), lost, (np.array(e_t), np.array(e_mean))
 
 
 def energy_drift_during_hold(proto, e_t, e_mean, p: Params3D):
-    """Max |E - E_ref| of the surviving-ensemble mean total energy after the
-    protocol ends (static potential -> should be conserved). In µK·kB."""
     m = e_t >= proto["t_hold_start"] + 1.0
     if m.sum() < 2:
         return np.nan
@@ -256,14 +232,11 @@ def energy_drift_during_hold(proto, e_t, e_mean, p: Params3D):
     return np.max(np.abs(Eh - Eh[0]))
 
 
-# ── Analysis ──────────────────────────────────────────────────────────────────
-
-
 def energy_above_final_min(state, p: Params3D):
     x, y, z, vx, vy, vz = state
-    U = potential(x, y, z, p.x_stop, p.y_stop, 0.0, p)  # ua = 0 after handoff
+    U = potential(x, y, z, p.x_stop, p.y_stop, 0.0, p)
     Umin = potential(p.x_stop, p.y_stop, 0.0, p.x_stop, p.y_stop, 0.0, p)
-    return 0.5 * (vx**2 + vy**2 + vz**2) + U - Umin, -Umin  # (E_rel, depth)
+    return 0.5 * (vx**2 + vy**2 + vz**2) + U - Umin, -Umin
 
 
 def energy_above_start_min(state, p: Params3D):
@@ -289,7 +262,6 @@ def analyze(proto, p: Params3D, init):
     ok = ~lost & delivered
     if ok.sum() < 10:
         print(f"{proto['label']}: only {ok.sum()} delivered survivors")
-        # raise RuntimeError(f"{proto['label']}: only {ok.sum()} delivered survivors")
 
     E_start = energy_above_start_min(init, p)
     E_final, depth_final = energy_above_final_min(final, p)
@@ -319,9 +291,6 @@ def analyze(proto, p: Params3D, init):
         final=tuple(c[ok] for c in final),
         init=tuple(c[ok] for c in init),
     )
-
-
-# ── Visualization ─────────────────────────────────────────────────────────────
 
 
 def plot_results(protos, results, p: Params3D, outfile="residual_energy_3d.png"):
@@ -474,9 +443,6 @@ def plot_results(protos, results, p: Params3D, outfile="residual_energy_3d.png")
     print(f"saved {outfile}")
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--protocol", default=None)
@@ -487,7 +453,7 @@ def main():
 
     p = Params3D()
     rng = np.random.default_rng(SEED)
-    init = tuple(sample_thermal(p, args.atoms, rng))  # one ensemble, shared by all
+    init = tuple(sample_thermal(p, args.atoms, rng))
 
     protos = [make_protocol(k, p, args.T_move, args.dt) for k in ("minjerk", "sta")]
     if args.protocol:

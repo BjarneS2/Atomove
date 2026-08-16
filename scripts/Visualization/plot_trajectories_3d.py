@@ -26,7 +26,6 @@ def plot_trajectories_3d(data: Dict, output_dir: Path, max_display: int = 400):
     lost_final = is_lost[-1]
     w0_um     = scales["w0_um"]
 
-    # subsample for display only
     rng = np.random.default_rng(0)
     idx = rng.permutation(n_shots)
     display_idx = idx[:max_display]
@@ -56,9 +55,6 @@ def plot_trajectories_3d(data: Dict, output_dir: Path, max_display: int = 400):
     v_ad_start  = np.sqrt(2.0 * f_start * U0_static) * v0
     v_ad_final  = np.sqrt(2.0 * f_final  * U0_static) * v0
 
-    # Aux tweezer "on" mask: once the amplitude drops off (protocol turned off)
-    # the atom is held by the static trap, so the trap-width bands should be
-    # drawn around the final held position rather than the moving aux centre.
     ua_max = np.max(np.abs(ua)) if np.size(ua) else 0.0
     aux_on = np.abs(ua) > 0.05 * ua_max if ua_max > 0 else np.ones_like(t, dtype=bool)
     aux_on[0] = 1
@@ -80,17 +76,13 @@ def plot_trajectories_3d(data: Dict, output_dir: Path, max_display: int = 400):
                       alpha=0.8, label="Aux tweezer", zorder=10)
             ax_p.axhline(p_start, color="gray", ls=":", lw=1.2, alpha=0.6)
             ax_p.axhline(p_stop,  color="gray", ls="-.", lw=1.2, alpha=0.6)
-            # trap width bands (±w): around the moving aux centre while the
-            # protocol is on, then around the final held position once it's off
             band_centre = np.where(aux_on, ctrl, p_stop)
             ax_p.plot(t, band_centre + w, color="red", lw=0.7, ls="-", alpha=0.6, zorder=9)
             ax_p.plot(t, band_centre - w, color="red", lw=0.7, ls="-", alpha=0.6, zorder=9)
         else:
-            # z column: axial confinement ±zR
             ax_p.axhline( zR, color="red", lw=0.7, ls="-", alpha=0.6)
             ax_p.axhline(-zR, color="red", lw=0.7, ls="-", alpha=0.6)
 
-        # adiabatic speed lines: full trap depth, starting fraction, final fraction
         ax_v.axhline( v_ad,       color="red", lw=0.9, ls="-",  alpha=0.7)
         ax_v.axhline(-v_ad,       color="red", lw=0.9, ls="-",  alpha=0.7)
         ax_v.axhline( v_ad_start, color="red", lw=0.7, ls="--", alpha=0.6)

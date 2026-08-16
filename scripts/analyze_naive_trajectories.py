@@ -38,10 +38,9 @@ def find_runs():
         with h5py.File(f, "r") as h:
             traj_type = _decode(h.attrs["traj_type"])
             base_run = _decode(h.attrs["base_run"])
-            T_atom = float(h.attrs["T_atom"]) * 1e6  # K -> uK
+            T_atom = float(h.attrs["T_atom"]) * 1e6
         temp_key = int(round(T_atom))
         key = (traj_type, base_run, temp_key)
-        # keep the most recent file if duplicates exist
         if key not in runs or f.stat().st_mtime > runs[key].stat().st_mtime:
             runs[key] = f
     return runs
@@ -95,7 +94,6 @@ def main():
             continue
         results[key] = analyze_file(runs[key])
 
-    # ── Full table ──────────────────────────────────────────────────────────
     lines = []
     lines.append(
         "| Trajectory | Base | T_atom | Survived | Recaptured | Lost | Left behind | Survival+Recaptured | Output file |"
@@ -119,7 +117,6 @@ def main():
                 )
     full_table = "\n".join(lines)
 
-    # ── 4x4 survival+recaptured table ──────────────────────────────────────
     lines2 = []
     header = "| Protocol | " + " | ".join(f"{t} uK" for t in TEMP_ORDER) + " |"
     sep = "|---|" + "---|" * len(TEMP_ORDER)

@@ -6,18 +6,17 @@ using Random
 
 const SEED = 101
 const SHOTS = 5000
-const EXTENSION_FACTOR = 1.0   # same relative extension used for the 1D benchmark
+const EXTENSION_FACTOR = 1.0
 
 const SRC_DIR = raw"c:\dev\GitHub\MasterThesisJulia\results\used_for_prep"
 const OUT_DIR = SRC_DIR
 
-# MTJ (1D) physical constants — fixed, same for every protocol in that framework
 const MTJ_kB = 1.380649e-23
 const MTJ_m = 2.273347e-25
-const MTJ_w0_um = 1.4            # length scale used for ALL positions in MTJ
+const MTJ_w0_um = 1.4
 
-const LAMBDA_STATIC_UM = 0.936   # 936 nm
-const LAMBDA_DYNAMIC_UM = 0.933  # 933 nm
+const LAMBDA_STATIC_UM = 0.936
+const LAMBDA_DYNAMIC_UM = 0.933
 
 const sim_consts3d = default_constants3d()
 
@@ -72,14 +71,12 @@ end
 function build_3d_protocol_and_params(mtj)
     t0_us = mtj_t0_us(mtj.T_tweezer)
 
-    # Physical unit conversion (all positions scaled by the fixed MTJ length unit)
     t_phys_us = mtj.t .* t0_us
     ux_phys_um = mtj.ux .* MTJ_w0_um
     xStop_phys_um = mtj.xStop * MTJ_w0_um
 
     uy_phys_um = zeros(Float64, length(t_phys_us))
 
-    # 3D atomove dimensionless units: 1 unit = 1 μm, 1 unit = 1 μs → values equal physical μm/μs numerically
     t3d, ux3d, uy3d, ua3d = extend_protocol3d(t_phys_us, ux_phys_um, uy_phys_um, copy(mtj.ua), EXTENSION_FACTOR)
 
     w_stat_um = mtj.w * MTJ_w0_um
@@ -88,11 +85,10 @@ function build_3d_protocol_and_params(mtj)
     zR = pi * w_stat_um^2 / LAMBDA_STATIC_UM
     zR_aux = pi * w_aux_um^2 / LAMBDA_DYNAMIC_UM
 
-    # 3D energy unit and dimensionless trap depths
-    v0_3d = 1.0   # w0_3d_um / t0_3d_us = 1/1
+    v0_3d = 1.0
     E0_3d = sim_consts3d.m * v0_3d^2
     U0_static = MTJ_kB * mtj.T_tweezer / E0_3d
-    U0_aux_max = U0_static  # same nominal depth as static trap; ua scales it 0..1, matching the 1D model
+    U0_aux_max = U0_static
 
     params = TweezerParams3D(
         w=w_stat_um,

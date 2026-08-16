@@ -57,8 +57,6 @@ function simulate_forward3d(
         vz[j+1] = vz[j] + 0.5 * (Fz0 + Fz1) * dt
     end
 
-    # Loss check: total energy > trap_fraction * potential at each step
-    # (trap_fraction === nothing disables this cutoff, e.g. for stress testing)
     if params.trap_fraction !== nothing
         for j in 1:n
             U = potential3d(x[j], y[j], z[j], ux[j], uy[j], ua[j], params)

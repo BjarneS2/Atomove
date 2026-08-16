@@ -4,26 +4,10 @@ using Dates
 using Printf
 using Random
 
-# Runs the forward problem for a *naive* (non-optimized) auxiliary-tweezer
-# trajectory — linear or minimum-jerk in position — timed to match the total
-# transport duration of one of the two converged thermal protocols:
-#
-#   base "A" -> control3d_thermal_2026-06-09_22-34-02.h5  (converged at T_atom=4uK)
-#   base "B" -> control3d_thermal_2026-07-05_21-03-39.h5  (converged at T_atom=16uK)
-#
-# Everything except ux/uy (the aux tweezer position) is taken verbatim from
-# the base protocol: same time grid (hence same transport duration T_A/T_B),
-# same ua amplitude ramp, same physical/geometry parameters. Only the aux
-# tweezer's path from (x_start,y_start) to (x_stop,y_stop) is replaced by a
-# linear or minimum-jerk profile.
-#
-# Usage:
-#   julia --project=. scripts/run_forward_3d_naive_trajectories.jl <base:A|B> <traj:linear|minjerk> <T_atom_uK> [shots] [extension_factor]
-
 const SEED = 101
 const DEFAULT_SHOTS = 10000
 const DEFAULT_EXTENSION_FACTOR = 2.0
-const FINAL_TRAP_FRACTION_OVERRIDE = 0.7  # forced on all protocols, matching the optimized-trajectory campaign
+const FINAL_TRAP_FRACTION_OVERRIDE = 0.7
 
 const RESULTS_DIR = joinpath(@__DIR__, "..", "ResultsForThesis")
 
@@ -113,10 +97,6 @@ linear_shape(tau::Real) = tau
 minjerk_shape(tau::Real) = 10.0 * tau^3 - 15.0 * tau^4 + 6.0 * tau^5
 
 function naive_protocol(ctrl::ControlProtocol3D, params::TweezerParams3D, traj_type::String)
-    # "minjerk_offset" reuses the optimized protocol's own ux/uy start and end
-    # points (rather than the nominal x_start/x_stop/y_start/y_stop geometry),
-    # so the naive trajectory covers exactly the same displacement as the
-    # optimized aux-tweezer path.
     use_offsets = endswith(traj_type, "_offset")
     base_type = use_offsets ? traj_type[1:end-length("_offset")] : traj_type
 

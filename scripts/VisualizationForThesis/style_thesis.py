@@ -5,7 +5,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "Visualization"))
-from utils3d import COLOR_ALIVE, COLOR_AUX, COLOR_LOST, COLOR_STATIC  # noqa: E402
+from utils3d import COLOR_ALIVE, COLOR_AUX, COLOR_LOST, COLOR_STATIC
 
 mpl.rcParams["mathtext.fontset"] = "cm"
 mpl.rcParams["font.family"] = "serif"
